@@ -2,3 +2,6 @@ build/
 pcaps/
 logs/
 .vscode/
+comp/
+*.sdnet
+info.json

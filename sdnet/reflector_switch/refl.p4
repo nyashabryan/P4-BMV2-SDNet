@@ -5,6 +5,7 @@
 
 /* -*- P4_16 -*- */
 #include <core.p4>
+#include "../xilinx.p4"
 
 const bit<16> TYPE_IPV4 = 0x0800;
 const bit<4> IPV4_VERSION = 4;
@@ -75,6 +76,7 @@ parser XParser(packet_in packet,
         }
 
     }
+}
 
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
@@ -83,14 +85,14 @@ parser XParser(packet_in packet,
 control IngressProc(inout headers hdr,
                     inout switch_metadata_t metadata) {
     action drop() {
-        metadata.eggress_port = 0xF;
+        metadata.egress_port = 0xF;
     }
     
-    action reflect(ingress_port port) {
+    action reflect(switch_port_t port) {
 
-        metadata.eggress_port = port;
+        metadata.egress_port = port;
         hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
-        hdr.ethernet.dstAddr = dstAddr;
+
         hdr.ipv4.dstAddr = hdr.ipv4.srcAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
@@ -105,21 +107,13 @@ control IngressProc(inout headers hdr,
     }
 }
 
-/*************************************************************************
-****************  E G R E S S   P R O C E S S I N G   *******************
-*************************************************************************/
 
-control EgressProc(inout headers hdr,
-                 inout metadata meta,
-                 inout standard_metadata_t standard_metadata) {
-    apply {  }
-}
 
 /*************************************************************************
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
-control XDeparser(packet_out packet, in headers hdr) {
+control XDeparser(in headers hdr, packet_out packet) {
     apply {
         
         packet.emit(hdr.ethernet);
@@ -131,7 +125,7 @@ control XDeparser(packet_out packet, in headers hdr) {
 ***********************  S W I T C H  *******************************
 *************************************************************************/
 
-V1Switch(
+XilinxSwitch(
     XParser(),
     IngressProc(),
     XDeparser()

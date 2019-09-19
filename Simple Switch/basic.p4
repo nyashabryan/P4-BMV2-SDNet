@@ -81,7 +81,7 @@ struct headers {
 *********************** P A R S E R  ***********************************
 *************************************************************************/
 
-parser Parser(packet_in packet,
+parser XParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,
                 inout standard_metadata_t standard_metadata) {
@@ -125,7 +125,7 @@ parser Parser(packet_in packet,
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
 
-control VerifyChecksum(inout headers hdr, inout metadata meta) {   
+control XVerifyChecksum(inout headers hdr, inout metadata meta) {   
     apply {  }
 }
 
@@ -142,8 +142,6 @@ control IngressProc(inout headers hdr,
     }
     
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-
-        if(hdr.ethernet.)
 
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
@@ -186,9 +184,16 @@ control IngressProc(inout headers hdr,
     
     apply {
 
-        select(hdr.ethernet.etherType) {
-            TYPE_IPV4: ipv4_lpm.apply();
-            TYPE_IPV6: ipv6_lpm.apply();
+        if (hdr.ethernet.etherType == TYPE_IPV4) {
+            if (hdr.ipv4.isValid()) {
+                ipv4_lpm.apply();
+            }
+        }
+
+        if (hdr.ethernet.etherType == TYPE_IPV6) {
+            if (hdr.ipv6.isValid()) {
+                ipv6_lpm.apply();
+            }
         }
         
     }
@@ -208,24 +213,25 @@ control EgressProc(inout headers hdr,
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
 
-control ComputeChecksum(inout headers hdr, inout metadata meta) {
-     apply {
-	update_checksum(
-	    hdr.ipv4.isValid(),
-            { hdr.ipv4.version,
-	      hdr.ipv4.ihl,
-              hdr.ipv4.diffserv,
-              hdr.ipv4.totalLen,
-              hdr.ipv4.identification,
-              hdr.ipv4.flags,
-              hdr.ipv4.fragOffset,
-              hdr.ipv4.ttl,
-              hdr.ipv4.protocol,
-              hdr.ipv4.srcAddr,
-              hdr.ipv4.dstAddr },
+control XComputeChecksum(inout headers hdr, inout metadata meta) {
+    apply {
+            update_checksum(
+	            hdr.ipv4.isValid(),
+                {hdr.ipv4.version,
+                hdr.ipv4.ihl,
+                hdr.ipv4.diffserv,
+                hdr.ipv4.totalLen,
+                hdr.ipv4.identification,
+                hdr.ipv4.flags,
+                hdr.ipv4.fragOffset,
+                hdr.ipv4.ttl,
+                hdr.ipv4.protocol,
+                hdr.ipv4.srcAddr,
+                hdr.ipv4.dstAddr },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16);
     }
+
 }
 
 
@@ -233,9 +239,12 @@ control ComputeChecksum(inout headers hdr, inout metadata meta) {
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
-control Deparser(packet_out packet, in headers hdr) {
+control XDeparser(packet_out packet, in headers hdr) {
     apply {
-        /* TODO: add deparser logic */
+        
+        packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
+        packet.emit(hdr.ipv6);
     }
 }
 
@@ -244,10 +253,10 @@ control Deparser(packet_out packet, in headers hdr) {
 *************************************************************************/
 
 V1Switch(
-    Parser(),
-    VerifyChecksum(),
+    XParser(),
+    XVerifyChecksum(),
     IngressProc(),
     EgressProc(),
-    ComputeChecksum(),
-    Deparser()
+    XComputeChecksum(),
+    XDeparser()
 ) main;

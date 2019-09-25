@@ -1,6 +1,10 @@
 /**
  * Simple IPv4 Reflector Switch. Based on the Xilinx Switch Architecture.
  * Takes in an IPv4 packet and reflects it back to the sender.
+ * Swaps the dest and src MAC address and IP addresses on reflection.
+ *
+ * Author: Nyasha Bryan Katemauswa
+ * September 2019
  */
 
 /* -*- P4_16 -*- */
@@ -17,13 +21,18 @@ const bit<4> IPV4_VERSION = 4;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 
-
+/**
+ * Layer 2 Ethernet Frame header structure.
+ */
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
 }
 
+/**
+ * IPv4 header structure.
+ */
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
@@ -39,7 +48,7 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-
+// A struct of the headers to be parsed by the switch.
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
@@ -50,7 +59,7 @@ struct headers {
 *********************** P A R S E R  ***********************************
 *************************************************************************/
 
-@Xilinx_MaxPacketRegion(1518*8) // in bit
+@Xilinx_MaxPacketRegion(1522*8) // The maximum size of the packets in the region
 parser XParser(packet_in packet,
                 out headers hdr) {
 

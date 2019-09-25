@@ -1,0 +1,75 @@
+% Packet Stimulus for the Reflector Switch
+%
+% Author:   Nyasha Katemauswa
+% Date:     September 2019
+%
+% Contains 3 packets
+%
+
+% Packet 1
+%
+% Ethernet Header:[DstMAC=b1492b9e6979 SrcMAC=89c99c809244 EtherType=0800]
+b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
+% IPV4 Header
+% [Version=4 IHL=5: 45
+% DSCP=ff
+% TotalLength=0018
+% Identification=ffff
+% Flags and FragOffset=00ff
+% TTL=04
+% Protocol=FD
+% HDR Checksum=ffff
+% IPv4Src=
+% IPv4Dst=
+
+45
+ff
+00 27
+ff ff
+00 ff
+04 FD
+ff ff
+C0 00 00 01
+C0 00 00 00
+
+% Payload: nyasha
+4E 79 61 73 68 61
+
+% Ethernet trailer:[ FCS=24f452c5 ]
+24 f4 52 c5
+;
+
+% Packet 2
+%
+% Ethernet Header:[DstMAC=b1492b9e6979 SrcMAC=89c99c809244 EtherType=0800]
+b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
+% IPV4 Header
+% [Version=4 IHL=5: 45
+% DSCP=ff
+% TotalLength=0018
+% Identification=ffff
+% Flags and FragOffset=00ff
+% TTL=04
+% Protocol=FD
+% HDR Checksum=ffff
+% IPv4Src=
+% IPv4Dst=
+
+45
+ff
+00 27
+ff ff
+00 ff
+04 FD
+ff ff
+C0 00 01 00
+C0 00 01 01
+
+% Payload: nyasha
+4E 79 61 73 68 61
+
+% Ethernet trailer:[ FCS=24f452c5 ]
+24 f4 52 c5
+;
+
+

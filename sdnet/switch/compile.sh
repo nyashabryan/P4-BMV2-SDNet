@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# Compiling the Reflector Switch
+# Compiling the Switch
 
 # Add Vivado and SDNet to Path
 PATH="/tools/Xilinx/Vivado/2019.1/bin:$PATH";

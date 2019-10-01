@@ -1,7 +1,7 @@
 /**
- * Simple IPv4 Reflector Switch. Based on the Xilinx Switch Architecture.
- * Takes in an IPv4 packet and reflects it back to the sender.
- * Swaps the dest and src MAC address and IP addresses on reflection.
+ * Simple IPv4 Straight Switch. Based on the Xilinx Switch Architecture
+ * for the ZedSwitch.
+ * Takes in an IPv4 and IPv6 Packets.
  *
  * Author: Nyasha Bryan Katemauswa
  * September 2019
@@ -9,17 +9,23 @@
 
 /* -*- P4_16 -*- */
 #include <core.p4>
-#include "../xilinx.p4"
+#include "../zed_switch"
 
-const bit<16> TYPE_IPV4 = 0x0800;
-const bit<4> IPV4_VERSION = 4;
+
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+
+const ethertype_t ETHERTYPE_TYPE_IPV4 = 0x0800
+const ethertype_t ETHERTYPE_TYPE_IPV6 = 0x86DD;
+const ip_version_t IPV4_VERSION = 4;
+const ip_version_t IPV6_VERSION = 6;
+const ip_number_t IPv6_ENCAPSULATION = 41;
+
+const ip4Addr_t SELFIP4ADD = 0xC0A80001;
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
-
-typedef bit<48> macAddr_t;
-typedef bit<32> ip4Addr_t;
 
 /**
  * Layer 2 Ethernet Frame header structure.
@@ -48,10 +54,26 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
+/**
+ * IPv6 header structure.
+ */
+header ipv6_t {
+    bit<4> version;
+    bit<8> trafficClass;
+    bit<24> flowLabel;
+    bit<16> payloadLen;
+    bit<8> nextHdr;
+    bit<8> hopLimit;
+    ip6Addr_t srcAddr;
+    ip6Addr_t dstAddr;
+}
+
+
 // A struct of the headers to be parsed by the switch.
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
+    ipv6_t       ipv6;
 }
 
 
@@ -71,7 +93,8 @@ parser XParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
+            ETHERTYPE_TYPE_IPV4: parse_ipv4;
+            ETHERTYPE_TYPE_IPV6: parse_ipv6;
             default: accept;
         }
     }
@@ -85,6 +108,15 @@ parser XParser(packet_in packet,
         }
 
     }
+
+    // Extract the ipv6 header
+    state parse_ipv6 {
+        packet.extract(hdr.ipv6);
+        transition select(hdr.ipv6.version) {
+            IPV6_VERSION: accept;
+            default: reject;
+        }
+    }
 }
 
 /*************************************************************************
@@ -92,27 +124,64 @@ parser XParser(packet_in packet,
 *************************************************************************/
 
 control IngressProc(inout headers hdr,
-                    inout switch_metadata_t metadata) {
+                    inout zed_metadata_t metadata) {
     action drop() {
         metadata.egress_port = 0xF;
     }
-    
-    action reflect(switch_port_t port) {
 
-        metadata.egress_port = port;
-        hdr.ethernet.dstAddr = hdr.ethernet.srcAddr;
+    action ipv4_forward() {
 
-        hdr.ipv4.dstAddr = hdr.ipv4.srcAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        metadata.egress_port = 0x1;
+    }
+
+    action ipv6_in_ipv4_forward() {
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        metadata.egress_port = 0x1;
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit - 1;    
+    }
+    
+    action ipv6_encapsulate() {
+
+        // Create the IPv4 headers
+        hdr.ipv4.version = IPV4_VERSION;
+        hdr.ipv4.ihl = 0x0;
+        hdr.ipv4.diffserv = 0x0;
+        hdr.ipv4.totalLen = hdr.ipv6.payloadLen + (64 + 128 + 128)/8 + 20; 
+        hdr.ipv4.identification = 0x0;
+        hdr.ipv4.flags = 0x0;
+        hdr.ipv4.fragOffset = 0x0;
+        hdr.ipv4.ttl = hdr.ipv6.hopLimit - 1;
+        hdr.ipv4.protocol = IPv6_ENCAPSULATION;
+        hdr.ipv4.hdrChecksum = 0x0;
+        hdr.ipv4.srcAddr = SELFIP4ADD;
+        hdr.ipv4.dstAddr = 0x0;
+
+        // Change the IPv6 headers
+        hdr.ipv6.nextHdr = IPv6_ENCAPSULATION;
+        hdr.ipv6.hopLimit = hdr.ipv6.hopLimit - 1;
+
+        // Mark egress port
+        metadata.egress_port = 0x1;
     }
     
     apply {
 
-        if (hdr.ethernet.etherType == TYPE_IPV4) {
+        if (hdr.ethernet.etherType == ETHERTYPE_TYPE_IPV4) {
             if (hdr.ipv4.isValid()) {
-                reflect(metadata.ingress_port);
+                if(hdr.ipv4.protocol == IPv6_ENCAPSULATION) {
+                    ipv6_in_ipv4_forward();
+                } else {
+                    ipv4_forward();
+                }
             } else drop();
-        } else drop();
+        } else if (hdr.ethernet.etherType == ETHERTYPE_TYPE_IPV6) {
+            if (hdr.ipv6.isValid()) {
+                ipv6_encapsulate();
+            } else {
+                drop();
+            }
+        }
     }
 }
 
@@ -127,6 +196,7 @@ control XDeparser(in headers hdr, packet_out packet) {
         
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
+        packet.emit(hdr.ipv6);
     }
 }
 

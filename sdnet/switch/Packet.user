@@ -1,4 +1,4 @@
-% Packet Stimulus for the Reflector Switch
+% Packet Stimulus for the Straight Example Switch
 %
 % Author:   Nyasha Katemauswa
 % Date:     September 2019
@@ -6,7 +6,7 @@
 % Contains 3 packets
 %
 
-% Packet 1
+% Packet 1 IPv4 Packet
 %
 % Ethernet Header:[DstMAC=b1492b9e6979 SrcMAC=89c99c809244 EtherType=0800]
 b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
@@ -39,7 +39,7 @@ C0 00 00 00
 24 f4 52 c5
 ;
 
-% Packet 2
+% Packet 2 IPv4 Packet carrying IPv6
 %
 % Ethernet Header:[DstMAC=b1492b9e6979 SrcMAC=89c99c809244 EtherType=0800]
 b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
@@ -50,7 +50,7 @@ b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
 % Identification=ffff
 % Flags and FragOffset=00ff
 % TTL=04
-% Protocol=FD
+% Protocol=29
 % HDR Checksum=ffff
 % IPv4Src=
 % IPv4Dst=
@@ -62,8 +62,22 @@ ff ff
 00 ff
 04 FD
 ff ff
-C0 00 01 00
-C0 00 01 01
+C0 A8 00 01
+00 00 00 00
+
+% Encapsulated IPv6 Headers
+% Version=6 TrafficClass=0 flowPath=0
+% PayloadLength=00 06
+% Next Header=29
+% HopLimit=04
+% SourceAdd=2001:0DB8:0000:0000:0000:FF00:0042:8329
+% DestAdd=2001:0DB8:0000:0000:0000:FF00:DC42:8359
+60 00 00 00
+00 06
+29
+04
+20 01 0D B8 00 00 00 00 00 00 FF 00 00 42 83 29
+20 01 0D B8 00 00 00 00 00 00 FF 00 DC 42 83 59
 
 % Payload: nyasha
 4E 79 61 73 68 61
@@ -72,4 +86,29 @@ C0 00 01 01
 24 f4 52 c5
 ;
 
+% Packet 3 IPv6 to be encapsulated
+%
+% Ethernet Header:[DstMAC=b1492b9e6979 SrcMAC=89c99c809244 EtherType=0800]
+b1 49 2b 9e 69 79 89 c9 9c 80 92 44 08 00
+
+% IPv6 Headers
+% Version=6 TrafficClass=0 flowPath=0
+% PayloadLength=00 06
+% Next Header=29
+% HopLimit=04
+% SourceAdd=2001:0DB8:0000:0000:0000:FF00:0042:8329
+% DestAdd=2001:0DB8:0000:0000:0000:FF00:DC42:8359
+60 00 00 00
+00 06
+29
+04
+20 01 0D B8 00 00 00 00 00 00 FF 00 00 42 83 29
+20 01 0D B8 00 00 00 00 00 00 FF 00 DC 42 83 59
+
+% Payload: nyasha
+4E 79 61 73 68 61
+
+% Ethernet trailer:[ FCS=24f452c5 ]
+24 f4 52 c5
+;
 

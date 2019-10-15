@@ -19,14 +19,15 @@ typedef bit<4> ip_version_t;
 /* Internet Protocol Number: Protocol in IPv4 and Next Header IPv6 */
 typedef bit<8> ip_number_t;
 
-/* Type to sort switch input port */
-typedef bit<4> switch_port_t;
 
 /* The zed_metadata struct used in the switch */
 struct zed_metadata_t{
     switch_port_t   ingress_port;
     switch_port_t   egress_port;
-    bit<1>          valid_;
+    bit<1>          valid_bit;
+    bit<11>         packet_length;
+    bit<16>         in_timestamp;
+    bit<16>         out_timestamp;
 }
 
 #endif

@@ -9,16 +9,19 @@
 
 /* -*- P4_16 -*- */
 #include <core.p4>
-#include "../zed_switch"
+#include "../zed_switch.p4"
 
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+typedef bit<128> ip6Addr_t;
 
-const ethertype_t ETHERTYPE_TYPE_IPV4 = 0x0800
+const ethertype_t ETHERTYPE_TYPE_IPV4 = 0x0800;
 const ethertype_t ETHERTYPE_TYPE_IPV6 = 0x86DD;
+
 const ip_version_t IPV4_VERSION = 4;
 const ip_version_t IPV6_VERSION = 6;
+
 const ip_number_t IPv6_ENCAPSULATION = 41;
 
 const ip4Addr_t SELFIP4ADD = 0xC0A80001;
@@ -133,6 +136,7 @@ control IngressProc(inout headers hdr,
 
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         metadata.egress_port = 0x1;
+        metadata.packet_length = hdr.ipv4.totalLen;
     }
 
     action ipv6_in_ipv4_forward() {
@@ -169,10 +173,16 @@ control IngressProc(inout headers hdr,
 
         if (hdr.ethernet.etherType == ETHERTYPE_TYPE_IPV4) {
             if (hdr.ipv4.isValid()) {
-                if(hdr.ipv4.protocol == IPv6_ENCAPSULATION) {
-                    ipv6_in_ipv4_forward();
+                // Check if the time to live is  0 or if switch is the packet src
+                if(hdr.ipv.ttl - 1 > 0 || hdr.ipv4.srcAddr == SELFIP4ADD || hdr.ipv4.dstAddr
+                == SELFIP4ADD) {
+                    if(hdr.ipv4.protocol == IPv6_ENCAPSULATION) {
+                        ipv6_in_ipv4_forward();
+                    } else {
+                        ipv4_forward();
+                    }
                 } else {
-                    ipv4_forward();
+                    drop();
                 }
             } else drop();
         } else if (hdr.ethernet.etherType == ETHERTYPE_TYPE_IPV6) {
